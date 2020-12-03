@@ -1,0 +1,914 @@
+--存储过程copy sql 未动(最初版本)
+
+  SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' as TZZBCK_ZBBH  ,'计划投资支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ 
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDTZJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+        WHERE 1=1 
+--        and TZJH_XMBH IS NOT NULL 
+        and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(XMJD_ZBSJ,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW
+        UNION ALL
+        SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' as TZZBCK_ZBBH  ,'计划资金支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ 
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDZJZCJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+        WHERE 1=1 
+              and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(XMJD_ZBSJ,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW
+        UNION ALL
+        
+        SELECT 
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT 
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN 
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm
+                 ,d.*
+             FROM
+             (
+                 SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH,'实际资金支出' TZZBCK_ZBMC
+                        ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title
+                 FROM SGBA_DW_TZ_JHWC
+                 unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+                 WHERE 1=1 
+--                 and JHWC_XMBH IS NOT NULL 
+                 and JHWC_TZLX='股权'
+             ) d 
+             WHERE mon <= XMJD_ZBSJ AND JHWC_JHND=substr(XMJD_ZBSJ,1,4)
+        ) WHERE RN = 1
+        
+        UNION ALL
+        
+        SELECT 
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT 
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN 
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm   
+                 ,d.*
+             FROM
+             (
+                     SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                            ,'SG_TZ_TZWC' TZZBCK_ZBBH,'实际投资支出' TZZBCK_ZBMC
+                            ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title
+                     FROM SGBA_DW_TZ_JHWC
+                     unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                     WHERE 1=1 
+--                           and JHWC_XMBH IS NOT NULL 
+                           and JHWC_TZLX='股权'
+             ) d 
+             WHERE mon <= XMJD_ZBSJ AND JHWC_JHND=substr(XMJD_ZBSJ,1,4)
+        ) WHERE RN = 1;
+        COMMIT;
+        
+        if bckCount>0 then
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = shortYear AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_JHTZ','SG_TZ_JHZJZC');
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = XMJD_ZBSJ AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_TZWC','SG_TZ_SJZJZC');
+            COMMIT;
+        end if;
+        --非股权的计划资金支出，实际资金支出，计划投资支出，实际投资支出指标
+        INSERT INTO SGBA_DW_TZ_TZZBCK (
+            TZZBCK_SID,TZZBCK_DWBH,
+            TZZBCK_TZDG,TZZBCK_ZBBH,
+            TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_KJQJ,TZZBCK_ZBSJ,
+            TZZBCK_XMLX,TZZBCK_TZLX,
+            TZZBCK_JHNW,
+            TZZBCK_BQZ,TZZBCK_BNZ,
+            TZZBCK_XMZLX,TZZBCK_CJSJ
+        )
+        -- 年度资金计划明细
+        with year_detail as (
+             SELECT
+                     case when JHWC_DGDW is null then JHWC_TZDW ELSE JHWC_DGDW END AS JHWC_DGDW,
+                     JHWC_TZDW,
+                     JHWC_JHNW,JHWC_TZLX,JHWC_XMLXMC,JHWC_JHND,JHWC_XMZLXMC,NVL(JHWC_NDZJZCJH,0) JHWC_NDZJZCJH,NVL(JHWC_NDTZJH,0) JHWC_NDTZJH
+                     ,nvl(JHWC_SJZJZC01,0) JHWC_SJZJZC01 ,nvl(JHWC_SJZJZC02,0) JHWC_SJZJZC02 ,nvl(JHWC_SJZJZC03,0) JHWC_SJZJZC03
+                     ,nvl(JHWC_SJZJZC04,0) JHWC_SJZJZC04 ,nvl(JHWC_SJZJZC05,0) JHWC_SJZJZC05 ,nvl(JHWC_SJZJZC06,0) JHWC_SJZJZC06
+                     ,nvl(JHWC_SJZJZC07,0) JHWC_SJZJZC07 ,nvl(JHWC_SJZJZC08,0) JHWC_SJZJZC08 ,nvl(JHWC_SJZJZC09,0) JHWC_SJZJZC09
+                     ,nvl(JHWC_SJZJZC10,0) JHWC_SJZJZC10 ,nvl(JHWC_SJZJZC11,0) JHWC_SJZJZC11 ,nvl(JHWC_SJZJZC12,0) JHWC_SJZJZC12
+                     
+                     ,nvl(JHWC_SJTZ01,0) JHWC_SJTZ01 ,nvl(JHWC_SJTZ02,0) JHWC_SJTZ02 ,nvl(JHWC_SJTZ03,0) JHWC_SJTZ03
+                     ,nvl(JHWC_SJTZ04,0) JHWC_SJTZ04 ,nvl(JHWC_SJTZ05,0) JHWC_SJTZ05 ,nvl(JHWC_SJTZ06,0) JHWC_SJTZ06
+                     ,nvl(JHWC_SJTZ07,0) JHWC_SJTZ07 ,nvl(JHWC_SJTZ08,0) JHWC_SJTZ08 ,nvl(JHWC_SJTZ09,0) JHWC_SJTZ09
+                     ,nvl(JHWC_SJTZ10,0) JHWC_SJTZ10 ,nvl(JHWC_SJTZ11,0) JHWC_SJTZ11 ,nvl(JHWC_SJTZ12,0) JHWC_SJTZ12
+             FROM SGBA_DW_TZ_JHWC t
+             WHERE JHWC_XMBH IS NOT NULL and JHWC_TZLX !='股权' AND JHWC_JHND = SUBSTR(XMJD_ZBSJ,1,4)
+             AND JHWC_TZDW is not null
+        )
+        -- 年度资金计划明细列转行明细【产生代管，投资类】
+        , year_tranfrom as (
+             select 
+                     t.name as TZZBCK_DWBH
+                     ,CASE WHEN t.title ='JHWC_DGDW' then '代管'
+                                WHEN t.title ='JHWC_TZDW' then '投资'
+                     end as TZZBCK_TZDG
+                     ,JHWC_JHND,JHWC_XMLXMC,JHWC_XMZLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_NDZJZCJH,JHWC_NDTZJH
+                     ,JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12
+                     ,JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12
+             from year_detail
+             unpivot (name for title in (JHWC_DGDW,JHWC_TZDW)) t
+        ) 
+        -- 投资支出 行列转换
+        ,mon_tz_detail as (
+                SELECT 
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_TZWC' TZZBCK_ZBBH
+                        ,'实际投资支出' TZZBCK_ZBMC
+                        ,JHWC_JHND TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = shortYear AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= XMJD_ZBSJ
+        )
+        -- 计划年度TZDG转换
+        ,jh_tzdg as (
+            SELECT 
+                t.name as TZZBCK_DWBH
+                ,CASE WHEN t.title ='TZJH_DGDW' then '代管'
+                      WHEN t.title ='TZJH_TZDW' then '投资'
+                 end as TZZBCK_TZDG
+                ,TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC,TZJH_JHND,TZJH_NDTZJH,TZJH_NDZJZCJH
+            FROM
+            (
+                SELECT
+                    case when TZJH_DGDW is null then TZJH_TZDW ELSE TZJH_DGDW END AS TZJH_DGDW
+                    ,TZJH_TZDW,'计划内' as TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC
+                    ,TZJH_JHND,NVL(TZJH_NDTZJH,0) TZJH_NDTZJH,NVL(TZJH_NDZJZCJH,0) TZJH_NDZJZCJH
+                FROM SGBA_DW_TZ_TZJH 
+                WHERE --TZJH_XMBH IS NOT NULL and --1014取消此条件
+                      TZJH_TZLX !='股权' AND TZJH_JHND = SUBSTR(xmjd_zbsj,1,4)
+                      AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+            ) s
+            unpivot (name for title in (TZJH_DGDW,TZJH_TZDW)) t
+        )
+        -- 资金支出 行列转换
+        ,mon_zj_detail as (
+                SELECT 
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH
+                        ,'实际资金支出' TZZBCK_ZBMC
+                        ,shortYear TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = shortYear AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= XMJD_ZBSJ
+        )
+        
+        
+        select 
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' TZZBCK_ZBBH
+            ,'计划资金支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+            ,TZJH_JHNW TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDZJZCJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC
+        UNION ALL
+        select 
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' TZZBCK_ZBBH
+            ,'计划投资支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+            ,TZJH_JHNW TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDTZJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC
+        UNION ALL
+         SELECT 
+                 GET_UUID(),TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2),TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT 
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ORDER BY TZZBCK_ZBSJ desc ) RN 
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title ) bm
+                        ,d.*
+                 FROM mon_zj_detail d 
+         ) WHERE RN = 1
+         union all
+         SELECT 
+                 GET_UUID(),TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2),TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT 
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ORDER BY TZZBCK_ZBSJ desc ) RN 
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title ) bm
+                        ,d.*
+                 FROM mon_tz_detail d 
+         ) WHERE RN = 1;
+
+
+----cesehi带zbsj—— sql查询ok 加三个字段
+
+ INSERT INTO SGBA_DW_TZ_TZZBCK (
+            TZZBCK_SID,TZZBCK_DWBH,
+            TZZBCK_TZDG,TZZBCK_ZBBH,
+            TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_KJQJ,TZZBCK_ZBSJ,
+            TZZBCK_XMLX,TZZBCK_TZLX,
+             TZZBCK_ZYZYSX, --
+             TZZBCK_XYLB , --
+            TZZBCK_JZXLWK, --
+            TZZBCK_JHNW,TZZBCK_GQNW,
+            TZZBCK_BQZ,TZZBCK_BNZ,
+            TZZBCK_XMZLX,TZZBCK_CJSJ
+        )
+         SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' as TZZBCK_ZBBH  ,'计划投资支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDTZJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSX
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+  left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+        WHERE 1=1
+--        and TZJH_XMBH IS NOT NULL
+        and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSX
+        UNION ALL
+        SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' as TZZBCK_ZBBH  ,'计划资金支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDZJZCJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSX
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+   left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+        WHERE 1=1
+              and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSX
+        UNION ALL
+
+        SELECT
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX ,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm
+                 ,d.*,BENEFIT_CATEGORY
+             FROM
+             (
+                 SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH,'实际资金支出' TZZBCK_ZBMC
+                        ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title,JHWC_XMID,JHWC_XLJZWK
+        ,JHWC_ZYSX
+                 FROM SGBA_DW_TZ_JHWC
+
+                 unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+
+
+                 WHERE 1=1
+--                 and JHWC_XMBH IS NOT NULL
+                 and JHWC_TZLX='股权'
+             ) d
+             left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  d.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE mon <= 202003 AND JHWC_JHND=substr(202003,1,4)
+        ) WHERE RN = 1
+
+        UNION ALL
+
+        SELECT
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm
+                 ,d.*,BENEFIT_CATEGORY
+             FROM
+             (
+                     SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                            ,'SG_TZ_TZWC' TZZBCK_ZBBH,'实际投资支出' TZZBCK_ZBMC
+                            ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title,JHWC_XMID,JHWC_XLJZWK
+        ,JHWC_ZYSX
+                     FROM SGBA_DW_TZ_JHWC
+                     unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                     WHERE 1=1
+--                           and JHWC_XMBH IS NOT NULL
+                           and JHWC_TZLX='股权'
+             ) d
+             left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  d.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE mon <= 202003 AND JHWC_JHND=substr(202003,1,4)
+        ) WHERE RN = 1;
+        COMMIT;
+        if bckCount>0 then
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = 2020 AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_JHTZ','SG_TZ_JHZJZC');
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = 202003 AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_TZWC','SG_TZ_SJZJZC');
+            COMMIT;
+        end if;
+        --非股权的计划资金支出，实际资金支出，计划投资支出，实际投资支出指标
+        INSERT INTO SGBA_DW_TZ_TZZBCK (
+            TZZBCK_SID,TZZBCK_DWBH,
+            TZZBCK_TZDG,TZZBCK_ZBBH,
+            TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_KJQJ,TZZBCK_ZBSJ,
+            TZZBCK_XMLX,TZZBCK_TZLX,
+             TZZBCK_ZYZYSX, --
+             TZZBCK_XYLB , --
+            TZZBCK_JZXLWK, --
+            TZZBCK_JHNW,
+            TZZBCK_BQZ,TZZBCK_BNZ,
+            TZZBCK_XMZLX,
+            TZZBCK_CJSJ
+        )
+        -- 年度资金计划明细
+        with year_detail as (
+             SELECT
+                     case when JHWC_DGDW is null then JHWC_TZDW ELSE JHWC_DGDW END AS JHWC_DGDW,
+                     JHWC_TZDW,
+                     JHWC_JHNW,JHWC_TZLX,JHWC_XMLXMC,JHWC_JHND,JHWC_XMZLXMC,NVL(JHWC_NDZJZCJH,0) JHWC_NDZJZCJH,NVL(JHWC_NDTZJH,0) JHWC_NDTZJH
+                     ,nvl(JHWC_SJZJZC01,0) JHWC_SJZJZC01 ,nvl(JHWC_SJZJZC02,0) JHWC_SJZJZC02 ,nvl(JHWC_SJZJZC03,0) JHWC_SJZJZC03
+                     ,nvl(JHWC_SJZJZC04,0) JHWC_SJZJZC04 ,nvl(JHWC_SJZJZC05,0) JHWC_SJZJZC05 ,nvl(JHWC_SJZJZC06,0) JHWC_SJZJZC06
+                     ,nvl(JHWC_SJZJZC07,0) JHWC_SJZJZC07 ,nvl(JHWC_SJZJZC08,0) JHWC_SJZJZC08 ,nvl(JHWC_SJZJZC09,0) JHWC_SJZJZC09
+                     ,nvl(JHWC_SJZJZC10,0) JHWC_SJZJZC10 ,nvl(JHWC_SJZJZC11,0) JHWC_SJZJZC11 ,nvl(JHWC_SJZJZC12,0) JHWC_SJZJZC12
+
+                     ,nvl(JHWC_SJTZ01,0) JHWC_SJTZ01 ,nvl(JHWC_SJTZ02,0) JHWC_SJTZ02 ,nvl(JHWC_SJTZ03,0) JHWC_SJTZ03
+                     ,nvl(JHWC_SJTZ04,0) JHWC_SJTZ04 ,nvl(JHWC_SJTZ05,0) JHWC_SJTZ05 ,nvl(JHWC_SJTZ06,0) JHWC_SJTZ06
+                     ,nvl(JHWC_SJTZ07,0) JHWC_SJTZ07 ,nvl(JHWC_SJTZ08,0) JHWC_SJTZ08 ,nvl(JHWC_SJTZ09,0) JHWC_SJTZ09
+                     ,nvl(JHWC_SJTZ10,0) JHWC_SJTZ10 ,nvl(JHWC_SJTZ11,0) JHWC_SJTZ11 ,nvl(JHWC_SJTZ12,0) JHWC_SJTZ12
+            ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX
+             FROM SGBA_DW_TZ_JHWC t
+              left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  t.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE JHWC_XMBH IS NOT NULL and JHWC_TZLX !='股权' AND JHWC_JHND = SUBSTR(202003,1,4)
+             AND JHWC_TZDW is not null
+        )
+        -- 年度资金计划明细列转行明细【产生代管，投资类】
+        , year_tranfrom as (
+             select
+                     t.name as TZZBCK_DWBH
+                     ,CASE WHEN t.title ='JHWC_DGDW' then '代管'
+                                WHEN t.title ='JHWC_TZDW' then '投资'
+                     end as TZZBCK_TZDG
+                     ,JHWC_JHND,JHWC_XMLXMC,JHWC_XMZLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_NDZJZCJH,JHWC_NDTZJH
+                     ,JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12
+                     ,JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX
+             from year_detail
+             unpivot (name for title in (JHWC_DGDW,JHWC_TZDW)) t
+        )
+
+        -- 投资支出 行列转换
+        ,mon_tz_detail as (
+                SELECT
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_TZWC' TZZBCK_ZBBH
+                        ,'实际投资支出' TZZBCK_ZBMC
+                        ,JHWC_JHND TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = 2020 AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= 202003
+        )
+        -- 计划年度TZDG转换
+        ,jh_tzdg as (
+            SELECT
+                t.name as TZZBCK_DWBH
+                ,CASE WHEN t.title ='TZJH_DGDW' then '代管'
+                      WHEN t.title ='TZJH_TZDW' then '投资'
+                 end as TZZBCK_TZDG
+                ,TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC,TZJH_JHND,TZJH_NDTZJH,TZJH_NDZJZCJH, TZJH_XLJZWK
+
+        ,TZJH_ZYSX,BENEFIT_CATEGORY
+            FROM
+            (
+                SELECT
+                    case when TZJH_DGDW is null then TZJH_TZDW ELSE TZJH_DGDW END AS TZJH_DGDW
+                    ,TZJH_TZDW,'计划内' as TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC
+                    ,TZJH_JHND,NVL(TZJH_NDTZJH,0) TZJH_NDTZJH,NVL(TZJH_NDZJZCJH,0) TZJH_NDZJZCJH,BENEFIT_CATEGORY, TZJH_XLJZWK
+
+        ,TZJH_ZYSX
+                FROM SGBA_DW_TZ_TZJH
+                 left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+                WHERE --TZJH_XMBH IS NOT NULL and --1014取消此条件
+                      TZJH_TZLX !='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+                      AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+            ) s
+            unpivot (name for title in (TZJH_DGDW,TZJH_TZDW)) t
+        )
+        -- 资金支出 行列转换
+        ,mon_zj_detail as (
+                SELECT
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH
+                        ,'实际资金支出' TZZBCK_ZBMC
+                        ,'2020' TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSX
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = 2020 AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= 202003
+        )
+        select
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' TZZBCK_ZBBH
+            ,'计划资金支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+            , TZJH_ZYSX as TZZBCK_ZYZYSX
+             ,BENEFIT_CATEGORY AS TZZBCK_XYLB,
+               TZJH_XLJZWK AS TZZBCK_JZXLWK
+            ,TZJH_JHNW TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDZJZCJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC ,TZJH_ZYSX ,
+BENEFIT_CATEGORY,
+ TZJH_XLJZWK
+        UNION ALL
+        select
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' TZZBCK_ZBBH
+            ,'计划投资支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+                , TZJH_ZYSX as TZZBCK_ZYZYSX
+             ,BENEFIT_CATEGORY AS TZZBCK_XYLB,
+               TZJH_XLJZWK AS TZZBCK_JZXLWK
+            ,TZJH_JHNW TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDTZJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC,TZJH_XMZLXMC ,TZJH_ZYSX ,
+BENEFIT_CATEGORY,TZJH_XLJZWK
+        UNION ALL
+         SELECT
+                 GET_UUID(),TZZBCK_DWBH ,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2) AS TZZBCK_KJQJ,
+                TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,
+                 JHWC_ZYSX AS TZZBCK_ZYZYSX,BENEFIT_CATEGORY AS TZZBCK_XYLB,JHWC_XLJZWK AS TZZBCK_JZXLWK,
+                TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,JHWC_ZYSX,BENEFIT_CATEGORY,JHWC_XLJZWK ORDER BY TZZBCK_ZBSJ desc ) RN
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,JHWC_ZYSX,BENEFIT_CATEGORY,JHWC_XLJZWK ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title,JHWC_ZYSX,BENEFIT_CATEGORY,JHWC_XLJZWK ) bm
+                        ,d.*
+                 FROM mon_zj_detail d
+         ) WHERE RN = 1
+         union all
+         SELECT
+                 GET_UUID(),TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2) AS TZZBCK_KJQJ,TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,
+                  JHWC_ZYSX AS TZZBCK_ZYZYSX,BENEFIT_CATEGORY AS TZZBCK_XYLB,JHWC_XLJZWK AS TZZBCK_JZXLWK,
+                TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ORDER BY TZZBCK_ZBSJ desc ) RN
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title ) bm
+                        ,d.*
+                 FROM mon_tz_detail d
+         ) WHERE RN = 1;
+
+
+----cesehi带zbsj—— sql查询ok 加一个字段
+
+--  股权的计划资金支出，实际资金支出，计划投资支出，实际投资支出指标
+        INSERT INTO SGBA_DW_TZ_TZZBCK(
+            TZZBCK_SID,TZZBCK_DWBH,
+            TZZBCK_TZDG,TZZBCK_ZBBH,
+            TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_KJQJ,TZZBCK_ZBSJ,
+            TZZBCK_XMLX,TZZBCK_TZLX,
+            TZZBCK_ZYZYSX, --
+            TZZBCK_XYLB, --
+            TZZBCK_JZXLWK, --
+TZZBCK_JHLX,TZZBCK_BBLX,
+            TZZBCK_JHNW,TZZBCK_GQNW,
+            TZZBCK_BQZ,TZZBCK_BNZ,
+            TZZBCK_XMZLX,TZZBCK_CJSJ
+        )
+-- jia
+            SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' as TZZBCK_ZBBH  ,'计划投资支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,TZJH_ZYSXMC,BENEFIT_CATEGORY, TZJH_XLJZWK,TZJH_JHLX,TZJH_BBLX,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDTZJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+  left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+        WHERE 1=1
+--        and TZJH_XMBH IS NOT NULL
+        and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSXMC,TZJH_JHLX,TZJH_BBLX
+        UNION ALL
+-- jia
+        SELECT
+            GET_UUID() TZZBCK_SID  ,TZJH_GQCZRBH TZZBCK_DWBH  ,'投资' TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' as TZZBCK_ZBBH  ,'计划资金支出' as TZZBCK_ZBMC ,TZJH_JHND,cast(NULL as varchar2(10)) TZZBCK_KJQJ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX ,TZJH_TZLX TZZBCK_TZLX ,TZJH_ZYSXMC,BENEFIT_CATEGORY, TZJH_XLJZWK,TZJH_JHLX,TZJH_BBLX,'计划内' TZZBCK_JHNW,TZJH_GQNW AS TZZBCK_GQNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ ,SUM(NVL(TZJH_NDZJZCJH,0)) TZZBCK_BNZ,TZJH_XMZLXMC TZZBCK_XMZLX
+
+            ,SYSDATE TZZBCK_CJSJ
+        FROM SGBA_DW_TZ_TZJH
+   left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+        WHERE 1=1
+              and TZJH_TZLX='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+              AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+        GROUP BY TZJH_GQCZRBH,TZJH_JHND,TZJH_XMLXMC,TZJH_TZLX,TZJH_XMZLXMC,TZJH_GQNW,BENEFIT_CATEGORY, TZJH_XLJZWK
+        ,TZJH_ZYSXMC,TZJH_JHLX,TZJH_BBLX
+        UNION ALL
+
+        SELECT
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_ZYSXMC,BENEFIT_CATEGORY, JHWC_XLJZWK,'NULL'AS TZJH_JHLX,'NULL'AS TZJH_BBLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX
+         ,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm
+                 ,d.*,BENEFIT_CATEGORY
+             FROM
+             (
+                 SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH,'实际资金支出' TZZBCK_ZBMC
+                        ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title,JHWC_XMID,JHWC_XLJZWK
+        ,JHWC_ZYSXMC
+                 FROM SGBA_DW_TZ_JHWC
+
+                 unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+
+
+                 WHERE 1=1
+--                 and JHWC_XMBH IS NOT NULL
+                 and JHWC_TZLX='股权'
+             ) d
+             left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  d.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE mon <= 202003 AND JHWC_JHND=substr(202003,1,4)
+        ) WHERE RN = 1
+
+        UNION ALL
+
+        SELECT
+             GET_UUID(),JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,SUBSTR(MON,1,4),SUBSTR(MON,5,2),MON,JHWC_XMLXMC,JHWC_TZLX,JHWC_ZYSXMC,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,'NULL' AS TZJH_JHLX,'NULL' AS TZJH_BBLX,JHWC_JHNW,JHWC_GQNW
+             ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,JHWC_XMZLXMC TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+        FROM
+        (
+             SELECT
+                 ROW_NUMBER() OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ORDER BY mon desc ) RN
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW ) bn
+                 ,SUM(name) OVER (PARTITION BY JHWC_GQCZRBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,title ) bm
+                 ,d.*,BENEFIT_CATEGORY
+             FROM
+             (
+                     SELECT name,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) mon,JHWC_GQCZRBH,'投资' TZZBCK_TZDG
+                            ,'SG_TZ_TZWC' TZZBCK_ZBBH,'实际投资支出' TZZBCK_ZBMC
+                            ,JHWC_JHND,JHWC_XMLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_GQNW,JHWC_XMZLXMC,title,JHWC_XMID,JHWC_XLJZWK
+        ,JHWC_ZYSXMC
+                     FROM SGBA_DW_TZ_JHWC
+                     unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                     WHERE 1=1
+--                           and JHWC_XMBH IS NOT NULL
+                           and JHWC_TZLX='股权'
+             ) d
+             left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  d.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE mon <= 202003 AND JHWC_JHND=substr(202003,1,4)
+        ) WHERE RN = 1;
+        COMMIT;
+        if bckCount>0 then
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = 2020 AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_JHTZ','SG_TZ_JHZJZC');
+            delete from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBSJ = 202003 AND TZZBCK_TZLX!='股权' AND TZZBCK_ZBBH IN('SG_TZ_TZWC','SG_TZ_SJZJZC');
+            COMMIT;
+        end if;
+--         非股权的计划资金支出，实际资金支出，计划投资支出，实际投资支出指标
+        INSERT INTO SGBA_DW_TZ_TZZBCK (
+            TZZBCK_SID,TZZBCK_DWBH,
+            TZZBCK_TZDG,TZZBCK_ZBBH,
+            TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_KJQJ,TZZBCK_ZBSJ,
+            TZZBCK_XMLX,TZZBCK_TZLX,
+             TZZBCK_ZYZYSX, --
+             TZZBCK_XYLB , --
+            TZZBCK_JZXLWK, --
+TZZBCK_JHLX,TZZBCK_BBLX,
+            TZZBCK_JHNW,
+            TZZBCK_BQZ,TZZBCK_BNZ,
+            TZZBCK_XMZLX,
+
+            TZZBCK_CJSJ
+        )
+        -- 年度资金计划明细
+-- jia
+        with year_detail as (
+             SELECT
+                     case when JHWC_DGDW is null then JHWC_TZDW ELSE JHWC_DGDW END AS JHWC_DGDW,
+                     JHWC_TZDW,
+                     JHWC_JHNW,JHWC_TZLX,JHWC_XMLXMC,JHWC_JHND,JHWC_XMZLXMC,NVL(JHWC_NDZJZCJH,0) JHWC_NDZJZCJH,NVL(JHWC_NDTZJH,0) JHWC_NDTZJH
+                     ,nvl(JHWC_SJZJZC01,0) JHWC_SJZJZC01 ,nvl(JHWC_SJZJZC02,0) JHWC_SJZJZC02 ,nvl(JHWC_SJZJZC03,0) JHWC_SJZJZC03
+                     ,nvl(JHWC_SJZJZC04,0) JHWC_SJZJZC04 ,nvl(JHWC_SJZJZC05,0) JHWC_SJZJZC05 ,nvl(JHWC_SJZJZC06,0) JHWC_SJZJZC06
+                     ,nvl(JHWC_SJZJZC07,0) JHWC_SJZJZC07 ,nvl(JHWC_SJZJZC08,0) JHWC_SJZJZC08 ,nvl(JHWC_SJZJZC09,0) JHWC_SJZJZC09
+                     ,nvl(JHWC_SJZJZC10,0) JHWC_SJZJZC10 ,nvl(JHWC_SJZJZC11,0) JHWC_SJZJZC11 ,nvl(JHWC_SJZJZC12,0) JHWC_SJZJZC12
+
+                     ,nvl(JHWC_SJTZ01,0) JHWC_SJTZ01 ,nvl(JHWC_SJTZ02,0) JHWC_SJTZ02 ,nvl(JHWC_SJTZ03,0) JHWC_SJTZ03
+                     ,nvl(JHWC_SJTZ04,0) JHWC_SJTZ04 ,nvl(JHWC_SJTZ05,0) JHWC_SJTZ05 ,nvl(JHWC_SJTZ06,0) JHWC_SJTZ06
+                     ,nvl(JHWC_SJTZ07,0) JHWC_SJTZ07 ,nvl(JHWC_SJTZ08,0) JHWC_SJTZ08 ,nvl(JHWC_SJTZ09,0) JHWC_SJTZ09
+                     ,nvl(JHWC_SJTZ10,0) JHWC_SJTZ10 ,nvl(JHWC_SJTZ11,0) JHWC_SJTZ11 ,nvl(JHWC_SJTZ12,0) JHWC_SJTZ12
+            ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSXMC,JHWC_JHLX
+             FROM SGBA_DW_TZ_JHWC t
+              left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  t.JHWC_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+             WHERE --JHWC_XMBH IS NOT NULL and
+             JHWC_TZLX !='股权' AND JHWC_JHND = SUBSTR(202003,1,4)
+             AND JHWC_TZDW is not null
+        )
+        -- 年度资金计划明细列转行明细【产生代管，投资类】
+-- jia
+        , year_tranfrom as (
+             select
+                     t.name as TZZBCK_DWBH
+                     ,CASE WHEN t.title ='JHWC_DGDW' then '代管'
+                                WHEN t.title ='JHWC_TZDW' then '投资'
+                     end as TZZBCK_TZDG
+                     ,JHWC_JHND,JHWC_XMLXMC,JHWC_XMZLXMC,JHWC_TZLX,JHWC_JHNW,JHWC_NDZJZCJH,JHWC_NDTZJH
+                     ,JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12
+                     ,JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSXMC,JHWC_JHLX
+             from year_detail
+             unpivot (name for title in (JHWC_DGDW,JHWC_TZDW)) t
+        )
+
+        -- 投资支出 行列转换
+        ,mon_tz_detail as (
+                SELECT
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_TZWC' TZZBCK_ZBBH
+                        ,'实际投资支出' TZZBCK_ZBMC
+                        ,JHWC_JHND TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSXMC
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJTZ01,JHWC_SJTZ02,JHWC_SJTZ03,JHWC_SJTZ04,JHWC_SJTZ05,JHWC_SJTZ06,JHWC_SJTZ07,JHWC_SJTZ08,JHWC_SJTZ09,JHWC_SJTZ10,JHWC_SJTZ11,JHWC_SJTZ12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = 2020 AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= 202003
+        )
+        -- 计划年度TZDG转换
+-- jia
+        ,jh_tzdg as (
+            SELECT
+                t.name as TZZBCK_DWBH
+                ,CASE WHEN t.title ='TZJH_DGDW' then '代管'
+                      WHEN t.title ='TZJH_TZDW' then '投资'
+                 end as TZZBCK_TZDG
+                ,TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC,TZJH_JHND,TZJH_NDTZJH,TZJH_NDZJZCJH, TZJH_XLJZWK,TZJH_JHLX,TZJH_BBLX
+
+        ,TZJH_ZYSXMC,BENEFIT_CATEGORY
+            FROM
+            (
+                SELECT
+                    case when TZJH_DGDW is null then TZJH_TZDW ELSE TZJH_DGDW END AS TZJH_DGDW
+                    ,TZJH_TZDW,'计划内' as TZJH_JHNW,TZJH_TZLX,TZJH_XMLXMC,TZJH_XMZLXMC
+                    ,TZJH_JHND,NVL(TZJH_NDTZJH,0) TZJH_NDTZJH,NVL(TZJH_NDZJZCJH,0) TZJH_NDZJZCJH,BENEFIT_CATEGORY, TZJH_XLJZWK,TZJH_JHLX,TZJH_BBLX
+
+        ,TZJH_ZYSXMC
+                FROM SGBA_DW_TZ_TZJH
+                 left join
+    (select distinct RESERVE_ID,BENEFIT_CATEGORY from SGBA_ODS_TZ_XMLCJBXX where  BENEFIT_CATEGORY is not null )
+        SGBA_ODS_TZ_XMLCJBXX
+on  SGBA_DW_TZ_TZJH.TZJH_XMID=SGBA_ODS_TZ_XMLCJBXX.RESERVE_ID
+                WHERE --TZJH_XMBH IS NOT NULL and --1014取消此条件
+                      TZJH_TZLX !='股权' AND TZJH_JHND = SUBSTR(202003,1,4)
+                      AND TZJH_JHLX='年初计划' and TZJH_BBLX='最终发布版'
+            ) s
+            unpivot (name for title in (TZJH_DGDW,TZJH_TZDW)) t
+        )
+        -- 资金支出 行列转换
+        ,mon_zj_detail as (
+                SELECT
+                        TZZBCK_DWBH
+                        ,TZZBCK_TZDG
+                        ,'SG_TZ_SJZJZC' TZZBCK_ZBBH
+                        ,'实际资金支出' TZZBCK_ZBMC
+                        ,'2020' TZZBCK_KJND
+                        ,concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) TZZBCK_ZBSJ
+                        ,JHWC_XMLXMC TZZBCK_XMLX
+                        ,JHWC_XMZLXMC TZZBCK_XMZLX
+                        ,JHWC_TZLX TZZBCK_TZLX
+                        ,JHWC_JHNW TZZBCK_JHNW
+                        ,name
+                        ,title
+                ,BENEFIT_CATEGORY, JHWC_XLJZWK
+        ,JHWC_ZYSXMC
+                FROM year_tranfrom
+                unpivot (name for title in (JHWC_SJZJZC01,JHWC_SJZJZC02,JHWC_SJZJZC03,JHWC_SJZJZC04,JHWC_SJZJZC05,JHWC_SJZJZC06,JHWC_SJZJZC07,JHWC_SJZJZC08,JHWC_SJZJZC09,JHWC_SJZJZC10,JHWC_SJZJZC11,JHWC_SJZJZC12)) t
+                WHERE JHWC_TZLX !='股权' AND JHWC_JHND = 2020 AND concat(JHWC_JHND,substr(title,LENGTH(title)-1,2)) <= 202003
+        )
+-- jia
+        select
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHZJZC' TZZBCK_ZBBH
+            ,'计划资金支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+            , TZJH_ZYSXMC as TZZBCK_ZYZYSX
+             ,BENEFIT_CATEGORY AS TZZBCK_XYLB,
+               TZJH_XLJZWK AS TZZBCK_JZXLWK,
+             TZJH_JHLX AS TZZBCK_JHLX,TZJH_BBLX AS TZZBCK_BBLX
+            ,TZJH_JHNW AS  TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDZJZCJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC ,TZJH_ZYSXMC ,TZJH_JHLX,TZJH_BBLX,
+BENEFIT_CATEGORY,
+ TZJH_XLJZWK
+        UNION ALL
+-- jia
+        select
+            GET_UUID()
+            ,TZZBCK_DWBH
+            ,TZZBCK_TZDG
+            ,'SG_TZ_JHTZ' TZZBCK_ZBBH
+            ,'计划投资支出' TZZBCK_ZBMC
+            ,TZJH_JHND TZZBCK_KJND
+            ,cast(null as varchar(10)) as TZZBCK_KJQJ
+            ,TZJH_JHND TZZBCK_ZBSJ
+            ,TZJH_XMLXMC TZZBCK_XMLX
+            ,TZJH_TZLX TZZBCK_TZLX
+                , TZJH_ZYSXMC as TZZBCK_ZYZYSX
+             ,BENEFIT_CATEGORY AS TZZBCK_XYLB,
+               TZJH_XLJZWK AS TZZBCK_JZXLWK
+                ,TZJH_JHLX AS TZZBCK_JHLX,TZJH_BBLX AS TZZBCK_BBLX
+            ,TZJH_JHNW TZZBCK_JHNW
+            ,CAST(NULL AS NUMBER(21,6)) TZZBCK_BQZ
+            ,SUM(NVL(TZJH_NDTZJH,0))  TZZBCK_BNZ
+            ,TZJH_XMZLXMC TZZBCK_XMZLX
+            ,SYSDATE TZZBCK_CJSJ
+        from jh_tzdg
+        GROUP BY TZZBCK_DWBH,TZZBCK_TZDG,TZJH_XMLXMC,TZJH_TZLX,TZJH_JHNW,TZJH_JHND,TZJH_XMZLXMC,TZJH_XMZLXMC ,TZJH_ZYSXMC ,
+BENEFIT_CATEGORY,TZJH_XLJZWK,TZJH_JHLX,TZJH_BBLX
+        UNION ALL
+         SELECT
+                 GET_UUID(),TZZBCK_DWBH ,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2) AS TZZBCK_KJQJ,
+                TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,
+                 JHWC_ZYSXMC AS TZZBCK_ZYZYSX,BENEFIT_CATEGORY AS TZZBCK_XYLB,JHWC_XLJZWK AS TZZBCK_JZXLWK
+                  ,'NULL' AS TZZBCK_JHLX,'NULL' AS TZZBCK_BBLX,
+                TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,JHWC_ZYSXMC,BENEFIT_CATEGORY,JHWC_XLJZWK ORDER BY TZZBCK_ZBSJ desc ) RN
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,JHWC_ZYSXMC,BENEFIT_CATEGORY,JHWC_XLJZWK ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title,JHWC_ZYSXMC,BENEFIT_CATEGORY,JHWC_XLJZWK ) bm
+                        ,d.*
+                 FROM mon_zj_detail d
+         ) WHERE RN = 1
+         union all
+         SELECT
+                 GET_UUID(),TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,SUBSTR(TZZBCK_ZBSJ,5,2) AS TZZBCK_KJQJ,TZZBCK_ZBSJ,TZZBCK_XMLX,TZZBCK_TZLX,
+                  JHWC_ZYSXMC AS TZZBCK_ZYZYSX,BENEFIT_CATEGORY AS TZZBCK_XYLB,JHWC_XLJZWK AS TZZBCK_JZXLWK
+                  ,'NULL' AS TZZBCK_JHLX,'NULL' AS TZZBCK_BBLX,
+                TZZBCK_JHNW
+                 ,bm TZZBCK_BQZ ,bn TZZBCK_BNZ ,TZZBCK_XMZLX ,SYSDATE TZZBCK_CJSJ
+         FROM (
+                 SELECT
+                        ROW_NUMBER() OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ORDER BY TZZBCK_ZBSJ desc ) RN
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW ) bn
+                        ,SUM(name) OVER (PARTITION BY TZZBCK_DWBH,TZZBCK_TZDG,TZZBCK_ZBBH,TZZBCK_ZBMC,TZZBCK_KJND,TZZBCK_XMLX,TZZBCK_TZLX,TZZBCK_JHNW,title ) bm
+                        ,d.*
+                 FROM mon_tz_detail d
+         ) WHERE RN = 1;
+
+
+select distinct TZZBCK_BBLX from SGBA_DW_TZ_TZZBCK where TZZBCK_ZBBH= 'SG_TZ_JHTZ' ;
